@@ -1,0 +1,15 @@
+# Dependencies / build output (each service also has its own, kept for local dev)
+**/node_modules/
+**/dist/
+**/coverage/
+
+# Env files
+**/.env
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/*
+!.vscode/extensions.json
