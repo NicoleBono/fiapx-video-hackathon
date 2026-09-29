@@ -124,7 +124,21 @@
   <b>Aluna:</b> Nicole Bono Martins
 </div>
 
-<h2>1. Repositório e Serviços</h2>
+<h2>1. Documentação</h2>
+
+<table>
+  <tr><th>Item</th><th>Link</th></tr>
+  <tr>
+    <td>✓ Documentação da arquitetura proposta para o projeto</td>
+    <td><a href="https://github.com/NicoleBono/fiapx-video-hackathon/blob/main/docs/architecture.md">docs/architecture.md</a></td>
+  </tr>
+  <tr>
+    <td>✓ Script de criação do banco de dados</td>
+    <td><a href="https://github.com/NicoleBono/fiapx-video-hackathon/blob/main/infra/postgres/init.sql">infra/postgres/init.sql</a></td>
+  </tr>
+</table>
+
+<h2>2. Repositório e Serviços</h2>
 
 <p><b>Repositório (monorepo):</b>
   <a href="https://github.com/NicoleBono/fiapx-video-hackathon">github.com/NicoleBono/fiapx-video-hackathon</a>
@@ -158,7 +172,7 @@
   </tr>
 </table>
 
-<h2>2. Vídeo de Demonstração</h2>
+<h2>3. Vídeo de Demonstração</h2>
 
 <div class="video-box">
   <b>Link do vídeo:</b> <a href="https://www.youtube.com/watch?v=kwxl_oDH53I">https://www.youtube.com/watch?v=kwxl_oDH53I</a>
@@ -174,7 +188,7 @@
   <li>Monitoramento em tempo real com Prometheus + Grafana</li>
 </ul>
 
-<h2>3. Diagrama Geral da Arquitetura</h2>
+<h2>4. Diagrama Geral da Arquitetura</h2>
 
 <pre class="diagram">Internet → Cliente
  │
@@ -203,7 +217,7 @@ Observabilidade: Prometheus (/metrics dos 4 serviços + RabbitMQ) + Grafana (pro
 Infra: Docker Compose — Postgres, Redis, RabbitMQ, MinIO, MailHog, Prometheus, Grafana
 CI/CD: GitHub Actions — lint, build, testes e build das imagens Docker</pre>
 
-<h2>4. Mensageria — Estratégia Escolhida: Eventos Assíncronos via RabbitMQ (topic exchange)</h2>
+<h2>5. Mensageria — Estratégia Escolhida: Eventos Assíncronos via RabbitMQ (topic exchange)</h2>
 
 <h3>Justificativa</h3>
 <p>
@@ -247,7 +261,7 @@ Esgotadas as tentativas:
   video-service consome     → atualiza status: FAILED                              ✓
   notification-service consome → envia e-mail de aviso ao usuário via SMTP          ✓</pre>
 
-<h2>5. Justificativa da Divisão dos Serviços e Tecnologias</h2>
+<h2>6. Justificativa da Divisão dos Serviços e Tecnologias</h2>
 
 <h3>auth-service — PostgreSQL</h3>
 <p>Isolado dos demais: é o único que conhece credenciais e hash de senha (bcrypt). Emite um JWT
@@ -310,7 +324,7 @@ principal para que um problema no envio de e-mail nunca trave o processamento de
   </tr>
 </table>
 
-<h2>6. Testes e Qualidade</h2>
+<h2>7. Testes e Qualidade</h2>
 
 <table>
   <tr><th>Serviço</th><th>Testes unitários</th><th>Testes e2e</th><th>Cobertura de linhas (aprox.)</th></tr>
@@ -324,7 +338,7 @@ infraestrutura (RabbitMQ, MinIO, Redis, SMTP, repositórios TypeORM), e os e2e s
 via <code>supertest</code> contra o guard/pipe/controller reais — nenhum deles depende de Postgres, Redis,
 RabbitMQ ou MinIO estarem no ar, então rodam em CI sem infraestrutura externa.</p>
 
-<h2>7. CI/CD</h2>
+<h2>8. CI/CD</h2>
 
 <p>Pipeline único no GitHub Actions (<code>.github/workflows/ci.yml</code>), cobrindo os 4 serviços do
 monorepo:</p>
@@ -340,7 +354,7 @@ jobs:
   docker-build (matriz, depende de "test")
     → build das 4 imagens Docker (buildx + cache do GitHub Actions)</pre>
 
-<h2>8. Monitoramento</h2>
+<h2>9. Monitoramento</h2>
 
 <p>Prometheus e Grafana provisionados automaticamente via Docker Compose — datasource e dashboard já
 vêm prontos, sem configuração manual:</p>
