@@ -32,9 +32,12 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    volumes:
+      - ./infra/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692" # métricas Prometheus (plugin rabbitmq_prometheus)
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -118,6 +121,9 @@ services:
       MINIO_BUCKET_RAW: videos-raw
       MINIO_BUCKET_ZIPS: videos-zips
       FRAME_RATE: 1
+      METRICS_PORT: 9100
+    ports:
+      - "9100:9100" # métricas Prometheus
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -134,6 +140,9 @@ services:
       SMTP_HOST: mailhog
       SMTP_PORT: 1025
       SMTP_FROM: noreply@fiapx.com
+      METRICS_PORT: 9101
+    ports:
+      - "9101:9101" # métricas Prometheus
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -141,6 +150,37 @@ services:
         condition: service_started
     restart: on-failure
 
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheusdata:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - auth-service
+      - video-service
+      - processing-service
+      - notification-service
+      - rabbitmq
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
   miniodata:
+  prometheusdata:
+  grafanadata:

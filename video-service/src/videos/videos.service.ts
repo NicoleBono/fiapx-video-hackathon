@@ -4,6 +4,7 @@ import { Readable } from 'stream';
 import { Repository } from 'typeorm';
 import { CacheService } from '../cache/cache.service';
 import { MessagingService } from '../messaging/messaging.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { StorageService } from '../storage/storage.service';
 import { Video, VideoStatus } from './entities/video.entity';
 
@@ -23,6 +24,7 @@ export class VideosService implements OnModuleInit {
     private readonly storage: StorageService,
     private readonly cache: CacheService,
     private readonly messaging: MessagingService,
+    private readonly metrics: MetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -53,6 +55,7 @@ export class VideosService implements OnModuleInit {
     });
 
     await this.cache.del(this.cache.userVideosKey(input.userId));
+    this.metrics.videosUploadedTotal.inc();
     return video;
   }
 
@@ -88,6 +91,7 @@ export class VideosService implements OnModuleInit {
       throw new NotFoundException('Zip not available for this video');
     }
     const stream = await this.storage.getZipObject(video.zipObjectKey);
+    this.metrics.videoDownloadsTotal.inc();
     return { stream, filename: `${video.id}-frames.zip` };
   }
 
@@ -130,5 +134,6 @@ export class VideosService implements OnModuleInit {
 
     await this.videosRepository.save(video);
     await this.cache.del(this.cache.userVideosKey(video.userId));
+    this.metrics.videoStatusEventsTotal.labels(routingKey).inc();
   }
 }

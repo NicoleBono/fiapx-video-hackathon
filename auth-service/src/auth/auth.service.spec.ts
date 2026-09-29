@@ -2,6 +2,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { MetricsService } from '../metrics/metrics.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 
@@ -9,6 +10,11 @@ describe('AuthService', () => {
   let service: AuthService;
   let users: jest.Mocked<Pick<UsersService, 'findByEmail' | 'findByUsername' | 'create'>>;
   let jwt: jest.Mocked<Pick<JwtService, 'sign'>>;
+  let metrics: {
+    authRegistrationsTotal: { inc: jest.Mock };
+    authLoginsTotal: { labels: jest.Mock };
+  };
+  let loginResultLabel: jest.Mock;
 
   beforeEach(async () => {
     users = {
@@ -17,12 +23,18 @@ describe('AuthService', () => {
       create: jest.fn(),
     };
     jwt = { sign: jest.fn().mockReturnValue('signed.jwt.token') };
+    loginResultLabel = jest.fn().mockReturnValue({ inc: jest.fn() });
+    metrics = {
+      authRegistrationsTotal: { inc: jest.fn() },
+      authLoginsTotal: { labels: loginResultLabel },
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: users },
         { provide: JwtService, useValue: jwt },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
 
@@ -58,6 +70,7 @@ describe('AuthService', () => {
       await expect(
         bcrypt.compare('S3nhaForte!', createArg.passwordHash),
       ).resolves.toBe(true);
+      expect(metrics.authRegistrationsTotal.inc).toHaveBeenCalledTimes(1);
     });
 
     it('rejects a duplicate email or username with ConflictException', async () => {
@@ -88,6 +101,7 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: 'nobody@example.com', password: 'x' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(loginResultLabel).toHaveBeenCalledWith('failure');
     });
 
     it('rejects a wrong password', async () => {
@@ -126,6 +140,7 @@ describe('AuthService', () => {
         username: 'jane',
         email: 'jane@example.com',
       });
+      expect(loginResultLabel).toHaveBeenCalledWith('success');
     });
   });
 });

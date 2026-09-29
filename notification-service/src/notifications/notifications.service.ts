@@ -3,6 +3,7 @@ import {
   MessagingService,
   VideoFailedPayload,
 } from '../messaging/messaging.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { MailerService } from './mailer.service';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class NotificationsService implements OnModuleInit {
   constructor(
     private readonly messaging: MessagingService,
     private readonly mailer: MailerService,
+    private readonly metrics: MetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -22,6 +24,12 @@ export class NotificationsService implements OnModuleInit {
     this.logger.log(
       `Notifying ${payload.email} about failed video ${payload.videoId}`,
     );
-    await this.mailer.sendFailureNotification(payload);
+    try {
+      await this.mailer.sendFailureNotification(payload);
+      this.metrics.notificationsSentTotal.labels('success').inc();
+    } catch (err) {
+      this.metrics.notificationsSentTotal.labels('failure').inc();
+      throw err;
+    }
   }
 }

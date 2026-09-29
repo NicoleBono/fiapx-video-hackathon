@@ -6,6 +6,7 @@ import {
   MessagingService,
   VideoUploadedPayload,
 } from '../messaging/messaging.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { StorageService } from '../storage/storage.service';
 import { FramesService } from './frames.service';
 
@@ -17,6 +18,7 @@ export class ProcessingService implements OnModuleInit {
     private readonly messaging: MessagingService,
     private readonly storage: StorageService,
     private readonly frames: FramesService,
+    private readonly metrics: MetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -27,6 +29,7 @@ export class ProcessingService implements OnModuleInit {
     const { videoId, objectKey, originalFilename } = payload;
     this.logger.log(`Processing ${videoId} (${originalFilename})`);
     this.messaging.publishProcessingStarted(videoId);
+    const stopTimer = this.metrics.processingJobDuration.startTimer();
 
     const workDir = await mkdtemp(join(tmpdir(), `video-${videoId}-`));
     try {
@@ -46,8 +49,14 @@ export class ProcessingService implements OnModuleInit {
       await this.storage.uploadZip(zipObjectKey, zipPath);
 
       this.messaging.publishVideoCompleted(videoId, frameCount, zipObjectKey);
+      this.metrics.processingJobsTotal.labels('success').inc();
+      this.metrics.framesExtracted.observe(frameCount);
       this.logger.log(`Completed ${videoId}: ${frameCount} frames -> ${zipObjectKey}`);
+    } catch (err) {
+      this.metrics.processingJobsTotal.labels('failed').inc();
+      throw err;
     } finally {
+      stopTimer();
       await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
     }
   }

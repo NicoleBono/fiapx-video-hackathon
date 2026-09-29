@@ -152,3 +152,15 @@ docker compose up --build
 - RabbitMQ management: http://localhost:15672 (guest/guest)
 - MinIO console: http://localhost:9001 (fiapx/fiapx12345)
 - MailHog UI: http://localhost:8025
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3002 (admin/admin) — dashboard "FIAP X - Visão Geral" já provisionado
+
+## Monitoramento
+
+Todos os serviços expõem métricas Prometheus (`GET /metrics`; os workers
+`processing-service`/`notification-service`, que não têm servidor HTTP, sobem um
+mini servidor só para isso na porta `METRICS_PORT`). O RabbitMQ expõe as suas
+próprias métricas nativas via plugin `rabbitmq_prometheus`. O Prometheus faz o
+scrape de todos e o Grafana já vem com o datasource e um dashboard prontos
+(uploads/downloads, latência HTTP, jobs de processamento, notificações, filas do
+RabbitMQ e memória por processo). Detalhes em [`README.md`](../README.md#monitoramento).

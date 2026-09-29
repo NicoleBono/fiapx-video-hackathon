@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { readdir } from 'fs/promises';
 import { MessagingService } from '../messaging/messaging.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { StorageService } from '../storage/storage.service';
 import { FramesService } from './frames.service';
 import { ProcessingService } from './processing.service';
@@ -29,6 +30,12 @@ describe('ProcessingService', () => {
     extractFrames: jest.fn(),
     zipDirectory: jest.fn().mockResolvedValue(undefined),
   };
+  const resultLabel = jest.fn().mockReturnValue({ inc: jest.fn() });
+  const metrics = {
+    processingJobsTotal: { labels: resultLabel },
+    processingJobDuration: { startTimer: jest.fn().mockReturnValue(jest.fn()) },
+    framesExtracted: { observe: jest.fn() },
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -38,6 +45,7 @@ describe('ProcessingService', () => {
         { provide: MessagingService, useValue: messaging },
         { provide: StorageService, useValue: storage },
         { provide: FramesService, useValue: frames },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
     service = moduleRef.get(ProcessingService);
@@ -80,6 +88,8 @@ describe('ProcessingService', () => {
       6,
       'v1/frames.zip',
     );
+    expect(resultLabel).toHaveBeenCalledWith('success');
+    expect(metrics.framesExtracted.observe).toHaveBeenCalledWith(6);
   });
 
   it('throws when ffmpeg produces no frames (so messaging can retry)', async () => {
@@ -87,6 +97,7 @@ describe('ProcessingService', () => {
 
     await expect(runHandler()).rejects.toThrow(/no frames/i);
     expect(messaging.publishVideoCompleted).not.toHaveBeenCalled();
+    expect(resultLabel).toHaveBeenCalledWith('failed');
   });
 
   it('cleans up its work directory even when the pipeline fails', async () => {

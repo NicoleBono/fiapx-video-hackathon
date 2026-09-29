@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { MetricsService } from '../metrics/metrics.service';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -12,6 +13,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -30,20 +32,24 @@ export class AuthService {
       passwordHash,
     });
 
+    this.metrics.authRegistrationsTotal.inc();
     return this.buildTokenResponse(user.id, user.username, user.email);
   }
 
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
+      this.metrics.authLoginsTotal.labels('failure').inc();
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatches) {
+      this.metrics.authLoginsTotal.labels('failure').inc();
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.metrics.authLoginsTotal.labels('success').inc();
     return this.buildTokenResponse(user.id, user.username, user.email);
   }
 

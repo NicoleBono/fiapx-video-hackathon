@@ -14,15 +14,16 @@ Arquitetura completa e contrato entre serviços: [`docs/architecture.md`](docs/a
 | `processing-service` | worker | — | Consome a fila, extrai frames (ffmpeg), zipa e sobe no MinIO |
 | `notification-service` | worker | — | Consome falhas e envia e-mail (SMTP/MailHog) |
 
-Infra (via Docker Compose): PostgreSQL, Redis, RabbitMQ, MinIO, MailHog.
+Infra (via Docker Compose): PostgreSQL, Redis, RabbitMQ, MinIO, MailHog, Prometheus, Grafana.
 
 Stack: Node.js 20 + NestJS 10 + TypeORM (Postgres) · RabbitMQ (`amqplib`) ·
-MinIO (S3) · Redis (`ioredis`) · `fluent-ffmpeg` · `nodemailer`.
+MinIO (S3) · Redis (`ioredis`) · `fluent-ffmpeg` · `nodemailer` · Prometheus + Grafana.
 
 ## Pré-requisitos
 
 - Docker + Docker Compose v2
-- Portas livres no host: `3000`, `3001`, `5432`, `6379`, `5672`, `15672`, `9000`, `9001`, `1025`, `8025`
+- Portas livres no host: `3000`, `3001`, `5432`, `6379`, `5672`, `15672`, `15692`,
+  `9000`, `9001`, `9090`, `9100`, `9101`, `1025`, `8025`, `3002`
 
 ## Como rodar
 
@@ -45,6 +46,8 @@ docker compose up --build --scale processing-service=3
 | RabbitMQ management | http://localhost:15672 | `guest` / `guest` |
 | MinIO console | http://localhost:9001 | `fiapx` / `fiapx12345` |
 | MailHog (inbox) | http://localhost:8025 | — |
+| Grafana | http://localhost:3002 | `admin` / `admin` |
+| Prometheus | http://localhost:9090 | — |
 
 ## Fluxo de uso
 
@@ -115,6 +118,39 @@ Exchange `video-events` (topic) + `video-events.dlx` (fanout, rede de segurança
   ao esgotar, publica `video.failed` com `permanent: true` e faz ack (não deixa mensagem presa).
 - `video.processing.queue` tem `x-dead-letter-exchange` para o caso de o worker cair sem nack.
 
+## Monitoramento
+
+Prometheus + Grafana, provisionados automaticamente (datasource e dashboard já vêm
+prontos ao subir o compose — nada pra configurar na mão).
+
+- Os 2 serviços HTTP (`auth-service`, `video-service`) expõem `GET /metrics` na
+  própria porta da API.
+- Os 2 workers (`processing-service`, `notification-service`) não têm servidor HTTP,
+  então cada um sobe um mini servidor só para `/metrics` (`METRICS_PORT`, portas
+  `9100`/`9101`).
+- O RabbitMQ expõe métricas nativas via plugin `rabbitmq_prometheus`
+  ([infra/rabbitmq/enabled_plugins](infra/rabbitmq/enabled_plugins)), porta `15692`.
+- Prometheus faz scrape dos 5 alvos a cada 10s ([infra/prometheus/prometheus.yml](infra/prometheus/prometheus.yml));
+  alvos e saúde do scrape em http://localhost:9090/targets.
+- Grafana já sobe com o datasource do Prometheus e o dashboard **"FIAP X - Visão
+  Geral"** provisionados ([infra/grafana/provisioning/](infra/grafana/provisioning/)),
+  com painéis de: taxa e latência (p95) das requisições HTTP, uploads/downloads de
+  vídeo por minuto, eventos de status consumidos, jobs de processamento por
+  resultado, notificações enviadas, profundidade das filas do RabbitMQ e memória de
+  cada processo Node.
+
+Métricas de negócio expostas (além das métricas padrão de processo/Node em cada
+serviço):
+
+| Métrica | Serviço | Labels |
+|---|---|---|
+| `http_request_duration_seconds` | auth, video | `method`, `route`, `status_code` |
+| `auth_registrations_total` / `auth_logins_total` | auth | `result` (logins) |
+| `videos_uploaded_total` / `video_downloads_total` | video | — |
+| `video_status_events_total` | video | `routing_key` |
+| `processing_jobs_total` / `processing_job_duration_seconds` / `processing_frames_extracted` | processing | `result` |
+| `notifications_sent_total` | notification | `result` |
+
 ## Variáveis de ambiente
 
 Cada serviço traz um `.env.example`. No Compose os valores já vêm definidos.
@@ -127,6 +163,7 @@ Destaques:
 - `REDIS_HOST` / `REDIS_PORT` — cache do `video-service`
 - `SMTP_HOST` / `SMTP_PORT` / `SMTP_FROM` — envio de e-mail (`notification-service`)
 - `FRAME_RATE` — frames por segundo extraídos pelo ffmpeg (default `1`)
+- `METRICS_PORT` — porta do servidor de métricas dos workers (`processing-service`: `9100`, `notification-service`: `9101`)
 
 ## Estrutura
 
@@ -137,6 +174,9 @@ Destaques:
 ├── processing-service/    NestJS worker — ffmpeg + archiver
 ├── notification-service/  NestJS worker — nodemailer
 ├── infra/postgres/        init.sql (cria auth_db / video_db)
+├── infra/rabbitmq/        enabled_plugins (habilita métricas Prometheus)
+├── infra/prometheus/      prometheus.yml (scrape dos 5 alvos)
+├── infra/grafana/         datasource + dashboard provisionados
 ├── docs/architecture.md   contrato entre serviços (fonte da verdade)
 ├── .github/workflows/     CI (build + testes nos 4 serviços)
 └── docker-compose.yml

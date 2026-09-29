@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MetricsMiddleware } from './metrics/metrics.middleware';
+import { MetricsModule } from './metrics/metrics.module';
 import { Video } from './videos/entities/video.entity';
 import { VideosModule } from './videos/videos.module';
 
@@ -17,7 +19,12 @@ import { VideosModule } from './videos/videos.module';
         synchronize: true,
       }),
     }),
+    MetricsModule,
     VideosModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(MetricsMiddleware).forRoutes('*');
+  }
+}

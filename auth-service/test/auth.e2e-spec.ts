@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import * as request from 'supertest';
 import { AuthController } from '../src/auth/auth.controller';
 import { AuthService } from '../src/auth/auth.service';
+import { MetricsService } from '../src/metrics/metrics.service';
 import { User } from '../src/users/entities/user.entity';
 import { UsersService } from '../src/users/users.service';
 
@@ -51,6 +52,7 @@ describe('auth-service (e2e)', () => {
       controllers: [AuthController],
       providers: [
         AuthService,
+        MetricsService,
         { provide: UsersService, useClass: InMemoryUsersService },
       ],
     }).compile();

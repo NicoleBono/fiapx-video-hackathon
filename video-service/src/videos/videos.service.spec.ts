@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test } from '@nestjs/testing';
 import { CacheService } from '../cache/cache.service';
 import { MessagingService } from '../messaging/messaging.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { StorageService } from '../storage/storage.service';
 import { Video, VideoStatus } from './entities/video.entity';
 import { VideosService } from './videos.service';
@@ -36,6 +37,12 @@ describe('VideosService', () => {
   let messaging: jest.Mocked<
     Pick<MessagingService, 'registerStatusHandler' | 'publishVideoUploaded'>
   >;
+  let metrics: {
+    videosUploadedTotal: { inc: jest.Mock };
+    videoStatusEventsTotal: { labels: jest.Mock };
+    videoDownloadsTotal: { inc: jest.Mock };
+  };
+  let statusEventLabel: jest.Mock;
 
   beforeEach(async () => {
     repo = {
@@ -55,6 +62,12 @@ describe('VideosService', () => {
       registerStatusHandler: jest.fn(),
       publishVideoUploaded: jest.fn(),
     };
+    statusEventLabel = jest.fn().mockReturnValue({ inc: jest.fn() });
+    metrics = {
+      videosUploadedTotal: { inc: jest.fn() },
+      videoStatusEventsTotal: { labels: statusEventLabel },
+      videoDownloadsTotal: { inc: jest.fn() },
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -63,6 +76,7 @@ describe('VideosService', () => {
         { provide: StorageService, useValue: storage },
         { provide: CacheService, useValue: cache },
         { provide: MessagingService, useValue: messaging },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
 
@@ -102,6 +116,7 @@ describe('VideosService', () => {
         originalFilename: 'clip.mp4',
       });
       expect(cache.del).toHaveBeenCalledWith('videos:user:user-1');
+      expect(metrics.videosUploadedTotal.inc).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -166,6 +181,7 @@ describe('VideosService', () => {
 
       expect(storage.getZipObject).toHaveBeenCalledWith('vid-1/frames.zip');
       expect(result).toEqual({ stream: fakeStream, filename: 'vid-1-frames.zip' });
+      expect(metrics.videoDownloadsTotal.inc).toHaveBeenCalledTimes(1);
     });
 
     it('throws 404 when the zip is not ready', async () => {
@@ -195,6 +211,7 @@ describe('VideosService', () => {
       expect(video.status).toBe(VideoStatus.PROCESSING);
       expect(repo.save).toHaveBeenCalledWith(video);
       expect(cache.del).toHaveBeenCalledWith('videos:user:user-1');
+      expect(statusEventLabel).toHaveBeenCalledWith('video.processing.started');
     });
 
     it('records frameCount and zip key on video.completed', async () => {
