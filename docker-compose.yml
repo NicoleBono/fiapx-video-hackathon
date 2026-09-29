@@ -122,8 +122,8 @@ services:
       MINIO_BUCKET_ZIPS: videos-zips
       FRAME_RATE: 1
       METRICS_PORT: 9100
-    ports:
-      - "9100:9100" # métricas Prometheus
+    # sem "ports": porta fixa no host impede escalar (--scale processing-service=N).
+    # O Prometheus já alcança :9100 pela rede interna do compose sem precisar publicar no host.
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -141,8 +141,7 @@ services:
       SMTP_PORT: 1025
       SMTP_FROM: noreply@fiapx.com
       METRICS_PORT: 9101
-    ports:
-      - "9101:9101" # métricas Prometheus
+    # sem porta fixa no host pelo mesmo motivo do processing-service (ver acima).
     depends_on:
       rabbitmq:
         condition: service_healthy

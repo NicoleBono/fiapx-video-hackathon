@@ -23,7 +23,8 @@ MinIO (S3) · Redis (`ioredis`) · `fluent-ffmpeg` · `nodemailer` · Prometheus
 
 - Docker + Docker Compose v2
 - Portas livres no host: `3000`, `3001`, `5432`, `6379`, `5672`, `15672`, `15692`,
-  `9000`, `9001`, `9090`, `9100`, `9101`, `1025`, `8025`, `3002`
+  `9000`, `9001`, `9090`, `1025`, `8025`, `3002`
+  (`9100`/`9101` — métricas dos workers — não são publicadas no host de propósito, veja "Monitoramento")
 
 ## Como rodar
 
@@ -127,7 +128,11 @@ prontos ao subir o compose — nada pra configurar na mão).
   própria porta da API.
 - Os 2 workers (`processing-service`, `notification-service`) não têm servidor HTTP,
   então cada um sobe um mini servidor só para `/metrics` (`METRICS_PORT`, portas
-  `9100`/`9101`).
+  `9100`/`9101`) — **só na rede interna do compose**, sem publicar no host de
+  propósito: `processing-service` é o serviço pensado pra escalar
+  (`--scale processing-service=N`), e porta fixa publicada no host impede subir
+  mais de uma réplica ("port is already allocated"). O Prometheus alcança
+  `/metrics` de qualquer réplica pela rede interna normalmente.
 - O RabbitMQ expõe métricas nativas via plugin `rabbitmq_prometheus`
   ([infra/rabbitmq/enabled_plugins](infra/rabbitmq/enabled_plugins)), porta `15692`.
 - Prometheus faz scrape dos 5 alvos a cada 10s ([infra/prometheus/prometheus.yml](infra/prometheus/prometheus.yml));

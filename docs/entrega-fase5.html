@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Hackathon — RM369371 — Grupo 22</title>
+<style>
+  :root {
+    --navy: #0b3558;
+    --navy-dark: #0b1f3a;
+    --red: #d92b2b;
+    --badge-bg: #eef5fc;
+    --badge-border: #bcdcf7;
+    --code-bg: #f5f5f5;
+    --row-alt: #f7f9fb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1a1a;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 24px 60px;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 2px;
+  }
+  h1 + p {
+    font-size: 18px;
+    color: #444;
+    margin-top: 0;
+  }
+  .rule {
+    border: none;
+    border-top: 3px solid var(--red);
+    margin: 12px 0 20px;
+  }
+  .badge {
+    background: var(--badge-bg);
+    border: 1px solid var(--badge-border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+    font-size: 14px;
+  }
+  .badge b { color: var(--navy); }
+  h2 {
+    font-size: 20px;
+    color: var(--navy);
+    border-bottom: 2px solid #dde4ea;
+    padding-bottom: 6px;
+    margin-top: 40px;
+  }
+  h3 {
+    font-size: 16px;
+    color: var(--navy);
+    margin-top: 24px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 13.5px;
+  }
+  th {
+    background: var(--navy-dark);
+    color: #fff;
+    text-align: left;
+    padding: 9px 12px;
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #e4e8ec;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: var(--row-alt); }
+  a { color: #1a5fb4; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .video-box {
+    background: #fff8e6;
+    border: 1px solid #f2d98a;
+    border-left: 4px solid #e8b93c;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 14px 0;
+  }
+  pre.diagram, pre.flow {
+    background: var(--code-bg);
+    border-left: 4px solid var(--red);
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.45;
+    border-radius: 0 4px 4px 0;
+  }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .tag {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #fff;
+    background: #6b7280;
+  }
+  .tag.http { background: #2f6fed; }
+  .tag.worker { background: #7c3aed; }
+  @media print {
+    body { margin: 0; max-width: none; }
+    h2 { page-break-after: avoid; }
+    table, pre { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Hackathon — Sistema de Processamento de Vídeos</h1>
+<p>Arquitetura de Software — FIAP Pós-Tech SOAT</p>
+<hr class="rule">
+
+<div class="badge">
+  <b>RM:</b> 369371 &nbsp;|&nbsp; <b>Grupo:</b> 22 &nbsp;|&nbsp; <b>Turma:</b> 12SOAT &nbsp;|&nbsp;
+  <b>Aluna:</b> Nicole Bono Martins
+</div>
+
+<h2>1. Repositório e Serviços</h2>
+
+<p><b>Repositório (monorepo):</b>
+  <a href="https://github.com/NicoleBono/fiapx-video-hackathon">github.com/NicoleBono/fiapx-video-hackathon</a>
+</p>
+
+<table>
+  <tr><th>Serviço</th><th>Tipo</th><th>Responsabilidade</th><th>Persistência</th></tr>
+  <tr>
+    <td>auth-service</td>
+    <td><span class="tag http">HTTP :3001</span></td>
+    <td>Registro, login e emissão de JWT</td>
+    <td>PostgreSQL (auth_db)</td>
+  </tr>
+  <tr>
+    <td>video-service</td>
+    <td><span class="tag http">HTTP :3000</span></td>
+    <td>Upload, listagem de status e download do zip</td>
+    <td>PostgreSQL (video_db) + Redis (cache) + MinIO (arquivos)</td>
+  </tr>
+  <tr>
+    <td>processing-service</td>
+    <td><span class="tag worker">worker</span></td>
+    <td>Consome a fila, extrai frames (ffmpeg) e zipa. Stateless e escalável horizontalmente.</td>
+    <td>MinIO (arquivos)</td>
+  </tr>
+  <tr>
+    <td>notification-service</td>
+    <td><span class="tag worker">worker</span></td>
+    <td>Consome eventos de falha e envia e-mail de aviso ao usuário</td>
+    <td>—</td>
+  </tr>
+</table>
+
+<h2>2. Vídeo de Demonstração</h2>
+
+<div class="video-box">
+  <b>Link do vídeo:</b> <a href="https://www.youtube.com/watch?v=kwxl_oDH53I">https://www.youtube.com/watch?v=kwxl_oDH53I</a>
+</div>
+
+<p>O vídeo demonstra:</p>
+<ul>
+  <li>Documentação e arquitetura escolhida</li>
+  <li>Fluxo completo: registro → login → upload de vídeo → acompanhamento de status → download do zip de frames</li>
+  <li>Tratamento de falha no processamento com notificação automática por e-mail</li>
+  <li>Processamento de múltiplos vídeos simultaneamente (RabbitMQ distribuindo entre réplicas do <code>processing-service</code>)</li>
+  <li>Pipeline de CI/CD no GitHub Actions</li>
+  <li>Monitoramento em tempo real com Prometheus + Grafana</li>
+</ul>
+
+<h2>3. Diagrama Geral da Arquitetura</h2>
+
+<pre class="diagram">Internet → Cliente
+ │
+ ├─ POST /register, /login → auth-service (:3001) → PostgreSQL (auth_db)
+ │    └─ emite JWT { sub, username, email }
+ │
+ └─ video-service (:3000), rotas protegidas por Bearer JWT
+      │ POST /videos/upload       → persiste + sobe no MinIO + publica evento → 202
+      │ GET  /videos              → lista status (cache Redis, TTL 10s)
+      │ GET  /videos/:id/download → stream do zip
+      │
+      ├─ PostgreSQL (video_db)   ├─ Redis (cache)   ├─ MinIO (raw / zips)
+      │
+      └─ RabbitMQ — exchange topic "video-events"
+            │
+            ├─ video.uploaded ──► processing-service (worker, N réplicas)
+            │                       ffmpeg extrai frames, zipa, sobe no MinIO
+            │                       publica: started / completed / failed
+            │                       (retry via x-retry-count + DLX)
+            │
+            ├─ video.status.queue ◄── video-service (atualiza status)
+            │
+            └─ video.notification.queue ─► notification-service → e-mail (SMTP)
+
+Observabilidade: Prometheus (/metrics dos 4 serviços + RabbitMQ) + Grafana (provisionado)
+Infra: Docker Compose — Postgres, Redis, RabbitMQ, MinIO, MailHog, Prometheus, Grafana
+CI/CD: GitHub Actions — lint, build, testes e build das imagens Docker</pre>
+
+<h2>4. Mensageria — Estratégia Escolhida: Eventos Assíncronos via RabbitMQ (topic exchange)</h2>
+
+<h3>Justificativa</h3>
+<p>
+Foi adotado um fluxo <b>assíncrono orientado a eventos</b> via RabbitMQ, com uma única exchange
+topic (<code>video-events</code>) e filas dedicadas por consumidor. Essa abordagem foi escolhida porque:
+</p>
+<ul>
+  <li>Desacopla o upload do processamento: o <code>video-service</code> responde <code>202</code> assim que persiste o
+      metadado e publica o evento — nenhuma requisição é perdida em pico, porque a fila absorve o excesso</li>
+  <li>Fan-out nativo da exchange topic: o mesmo evento (<code>video.failed</code>) é consumido por dois serviços
+      diferentes (<code>video-service</code> e <code>notification-service</code>) sem acoplamento entre eles</li>
+  <li><code>processing-service</code> é totalmente stateless — qualquer número de réplicas compete pela mesma fila
+      (<code>prefetch=1</code>), escalando horizontalmente sem nenhuma coordenação entre instâncias</li>
+  <li>Retry automático controlado por um header na própria mensagem (<code>x-retry-count</code>), com uma
+      Dead Letter Exchange como rede de segurança para o caso do worker cair sem nem dar nack</li>
+</ul>
+
+<h3>Fluxo principal — Upload e Processamento</h3>
+<pre class="flow">1. Cliente → POST /videos/upload (Bearer JWT)
+   video-service persiste Video (status: PENDING), sobe o arquivo bruto no MinIO
+   └─► publica: video.uploaded { videoId, userId, email, objectKey, originalFilename }
+   Responde 202 imediatamente (upload não bloqueante)
+
+2. processing-service consome video.uploaded
+   └─► publica: video.processing.started { videoId }
+   video-service consome → atualiza status: PROCESSING
+
+3. processing-service baixa o raw, extrai frames (ffmpeg), zipa e sobe no MinIO
+   └─► publica: video.completed { videoId, frameCount, zipObjectKey }
+   video-service consome → atualiza status: DONE
+
+4. Cliente → GET /videos/:id/download → stream do zip de frames</pre>
+
+<h3>Tratamento de falha</h3>
+<pre class="flow">processing-service falha ao processar (ex: arquivo inválido)
+  └─► republica com x-retry-count + 1 (até RABBITMQ_MAX_RETRIES, default 3)
+
+Esgotadas as tentativas:
+  └─► publica: video.failed { videoId, userId, email, errorMessage, permanent: true }
+
+  video-service consome     → atualiza status: FAILED                              ✓
+  notification-service consome → envia e-mail de aviso ao usuário via SMTP          ✓</pre>
+
+<h2>5. Justificativa da Divisão dos Serviços e Tecnologias</h2>
+
+<h3>auth-service — PostgreSQL</h3>
+<p>Isolado dos demais: é o único que conhece credenciais e hash de senha (bcrypt). Emite um JWT
+autocontido (<code>{sub, username, email}</code>) que os outros serviços validam localmente, sem round-trip
+síncrono a cada requisição.</p>
+
+<h3>video-service — PostgreSQL + Redis + MinIO</h3>
+<p>Único ponto de contato HTTP do usuário para vídeo. Persiste metadado num banco isolado
+(<code>video_db</code>, sem acesso direto ao <code>auth_db</code>), usa Redis como cache de leitura
+(cache-aside, TTL 10s, invalidado a cada upload ou mudança de status) para a listagem não bater
+sempre no banco, e MinIO (S3-compatible) para o arquivo bruto e o zip — desacopla o armazenamento
+dos containers de processamento e permite múltiplas réplicas sem volume compartilhado.</p>
+
+<h3>processing-service — worker stateless, sem banco</h3>
+<p>Não guarda nenhum estado em memória nem em disco além de um diretório temporário por job;
+qualquer número de réplicas consome a mesma fila em paralelo. Usa <code>fluent-ffmpeg</code> para extração
+de frames e <code>archiver</code> para compactação.</p>
+
+<h3>notification-service — worker stateless, sem banco</h3>
+<p>Consome apenas o evento de falha e dispara o e-mail via SMTP; fica desacoplado do fluxo
+principal para que um problema no envio de e-mail nunca trave o processamento de vídeos.</p>
+
+<h3>Tecnologias transversais</h3>
+<table>
+  <tr><th>Tecnologia</th><th>Uso</th><th>Justificativa</th></tr>
+  <tr>
+    <td>NestJS 10 + TypeORM</td>
+    <td>Todos os serviços</td>
+    <td>Framework modular com injeção de dependência nativa; mesmo padrão em toda a stack</td>
+  </tr>
+  <tr>
+    <td>RabbitMQ (amqplib)</td>
+    <td>Mensageria</td>
+    <td>Exchange topic com fan-out nativo, DLX e retry simples de implementar, fácil de rodar via Docker</td>
+  </tr>
+  <tr>
+    <td>MinIO</td>
+    <td>Armazenamento de arquivos</td>
+    <td>Compatível com S3 — troca fácil por um bucket real em produção sem mudar código</td>
+  </tr>
+  <tr>
+    <td>Redis (ioredis)</td>
+    <td>Cache</td>
+    <td>Cache-aside simples para a listagem de status, sem sobrecarregar o Postgres</td>
+  </tr>
+  <tr>
+    <td>Prometheus + Grafana</td>
+    <td>Monitoramento</td>
+    <td>Métricas de negócio e infraestrutura (RabbitMQ nativo via plugin), dashboard provisionado automaticamente</td>
+  </tr>
+  <tr>
+    <td>Docker Compose</td>
+    <td>Orquestração local</td>
+    <td>Escala horizontal do <code>processing-service</code> via <code>--scale</code>, suficiente para o escopo do desafio</td>
+  </tr>
+  <tr>
+    <td>GitHub Actions</td>
+    <td>CI/CD</td>
+    <td>Pipeline único cobrindo os 4 serviços do monorepo</td>
+  </tr>
+</table>
+
+<h2>6. Testes e Qualidade</h2>
+
+<table>
+  <tr><th>Serviço</th><th>Testes unitários</th><th>Testes e2e</th><th>Cobertura de linhas (aprox.)</th></tr>
+  <tr><td>auth-service</td><td>10</td><td>6</td><td>~90%</td></tr>
+  <tr><td>video-service</td><td>33</td><td>5</td><td>~94%</td></tr>
+  <tr><td>processing-service</td><td>17</td><td>—</td><td>~90%</td></tr>
+  <tr><td>notification-service</td><td>13</td><td>—</td><td>~90%</td></tr>
+</table>
+<p>Total: <b>73 testes unitários + 11 testes e2e = 84 testes</b>. Os testes unitários mockam toda a
+infraestrutura (RabbitMQ, MinIO, Redis, SMTP, repositórios TypeORM), e os e2e sobem a aplicação real
+via <code>supertest</code> contra o guard/pipe/controller reais — nenhum deles depende de Postgres, Redis,
+RabbitMQ ou MinIO estarem no ar, então rodam em CI sem infraestrutura externa.</p>
+
+<h2>7. CI/CD</h2>
+
+<p>Pipeline único no GitHub Actions (<code>.github/workflows/ci.yml</code>), cobrindo os 4 serviços do
+monorepo:</p>
+<pre class="flow">on: push (main) | pull_request (main) | workflow_dispatch
+
+jobs:
+  test (matriz: auth-service, video-service, processing-service, notification-service)
+    → npm ci → lint --if-present → build → testes unitários (--coverage) → e2e (auth/video)
+
+  compose-validate
+    → docker compose config -q
+
+  docker-build (matriz, depende de "test")
+    → build das 4 imagens Docker (buildx + cache do GitHub Actions)</pre>
+
+<h2>8. Monitoramento</h2>
+
+<p>Prometheus e Grafana provisionados automaticamente via Docker Compose — datasource e dashboard já
+vêm prontos, sem configuração manual:</p>
+<ul>
+  <li><code>auth-service</code> e <code>video-service</code> expõem <code>GET /metrics</code> na própria porta HTTP</li>
+  <li><code>processing-service</code> e <code>notification-service</code> (workers, sem servidor HTTP) sobem um mini
+      servidor só para <code>/metrics</code>, na rede interna do compose</li>
+  <li>RabbitMQ expõe métricas nativas via plugin <code>rabbitmq_prometheus</code></li>
+  <li>Dashboard "FIAP X - Visão Geral" com 9 painéis: taxa e latência (p95) de requisições HTTP,
+      uploads/downloads de vídeo por minuto, eventos de status consumidos, jobs de processamento por
+      resultado, notificações enviadas, profundidade das filas do RabbitMQ e memória por processo</li>
+</ul>
+
+</body>
+</html>
